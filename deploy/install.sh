@@ -151,17 +151,28 @@ chmod 644 "$HTPASSWD_FILE"
 say "6/7 nginx 站点"
 mkdir -p "$NGINX_CONF_DIR"
 TARGET_CONF="$NGINX_CONF_DIR/${DOMAIN}.conf"
+CERT=""
+CERT_KEY=""
 if [ -f "$TARGET_CONF" ]; then
   BAK="${TARGET_CONF}.bak.$(date +%s)"
   cp "$TARGET_CONF" "$BAK"
   echo "已备份原站点配置：$BAK"
+  # 尽量复用已有证书，避免接管后 HTTPS 掉线
+  CERT="$(grep -oE 'ssl_certificate[[:space:]]+[^;]+;' "$TARGET_CONF" | head -1 | awk '{print $2}' | tr -d ';')"
+  CERT_KEY="$(grep -oE 'ssl_certificate_key[[:space:]]+[^;]+;' "$TARGET_CONF" | head -1 | awk '{print $2}' | tr -d ';')"
+  [ -f "${CERT:-/nonexistent}" ] || CERT=""
+  [ -f "${CERT_KEY:-/nonexistent}" ] || CERT_KEY=""
+  [ -n "$CERT" ] && echo "复用证书：$CERT"
 fi
 
-cat >"$TARGET_CONF" <<EOF
+write_server() {
+  local listen="$1"
+  local ssl_lines="$2"
+  cat <<EOF
 server {
-    listen 80;
+    listen ${listen};
     server_name ${DOMAIN};
-
+${ssl_lines}
     auth_basic "harness";
     auth_basic_user_file ${HTPASSWD_FILE};
 
@@ -182,6 +193,17 @@ server {
     location = /install.ps1 { proxy_pass http://127.0.0.1:${PORT}; }
 }
 EOF
+}
+
+if [ -n "$CERT" ] && [ -n "$CERT_KEY" ]; then
+  {
+    printf 'server {\n    listen 80;\n    server_name %s;\n    return 301 https://$host$request_uri;\n}\n\n' "$DOMAIN"
+    write_server "443 ssl http2" "    ssl_certificate ${CERT};
+    ssl_certificate_key ${CERT_KEY};"
+  } >"$TARGET_CONF"
+else
+  write_server "80" "" >"$TARGET_CONF"
+fi
 
 "$NGINX_BIN" -t || die "nginx 配置检查失败"
 $NGINX_RELOAD || die "nginx reload 失败"
