@@ -90,6 +90,7 @@ else
   rm -rf "$TMP_CLONE"
   echo "已初始化代码到 $APP_DIR"
 fi
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_DIR"
 
 # ---------- 2 git 身份 ----------
 say "2/7 git 身份与推送方式"
@@ -144,18 +145,33 @@ echo "网关已启动：127.0.0.1:${PORT}"
 
 # ---------- 5 密码 ----------
 say "5/7 登录密码"
+if [ -d /www/server/nginx/conf ]; then
+  HTPASSWD_FILE=/www/server/nginx/conf/.harness.htpasswd
+else
+  HTPASSWD_FILE=/etc/nginx/.harness.htpasswd
+fi
 HASH="$(openssl passwd -apr1 "$BASIC_PASS")"
-mkdir -p "$(dirname "$NGINX_CONF_DIR")"
-printf '%s:%s\n' "$BASIC_USER" "$HASH" >/etc/nginx/.harness.htpasswd 2>/dev/null \
-  || printf '%s:%s\n' "$BASIC_USER" "$HASH" >/www/server/nginx/conf/.harness.htpasswd
-HTPASSWD_FILE=/etc/nginx/.harness.htpasswd
-[ -f "$HTPASSWD_FILE" ] || HTPASSWD_FILE=/www/server/nginx/conf/.harness.htpasswd
+printf '%s:%s\n' "$BASIC_USER" "$HASH" >"$HTPASSWD_FILE"
 chmod 644 "$HTPASSWD_FILE"
 
 # ---------- 6 nginx ----------
 say "6/7 nginx 站点"
 mkdir -p "$NGINX_CONF_DIR"
-TARGET_CONF="$NGINX_CONF_DIR/${DOMAIN}.conf"
+MATCHES="$(grep -lE "server_name[^;]*[[:space:]]${DOMAIN}([[:space:];]|$)" "$NGINX_CONF_DIR"/*.conf 2>/dev/null || true)"
+TARGET_CONF="$(printf '%s\n' "$MATCHES" | head -1)"
+if [ -z "$TARGET_CONF" ]; then
+  TARGET_CONF="$NGINX_CONF_DIR/${DOMAIN}.conf"
+else
+  # 同名 server_name 的其他文件会让 nginx 用错配置，先备份移走
+  for f in $MATCHES; do
+    if [ "$f" != "$TARGET_CONF" ]; then
+      mv "$f" "$f.bak.$(date +%s)"
+      echo "移走重复站点配置：$f"
+    fi
+  done
+  echo "复用已有站点配置：$TARGET_CONF"
+fi
+
 CERT=""
 CERT_KEY=""
 if [ -f "$TARGET_CONF" ]; then
