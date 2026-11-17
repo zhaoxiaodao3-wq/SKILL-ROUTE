@@ -74,7 +74,10 @@ if [ "$need_node" = 1 ]; then
   fi
 fi
 NODE_BIN="$(command -v node)"
+NPM_BIN="$(command -v npm || true)"
+[ -n "$NPM_BIN" ] || die "找不到 npm（Node 装了但 npm 不在 PATH）"
 echo "node: $($NODE_BIN -v)  ($NODE_BIN)"
+echo "npm:  $($NPM_BIN -v)  ($NPM_BIN)"
 
 # ---------- 1 代码 ----------
 say "1/7 服务用户与代码"
@@ -109,8 +112,9 @@ fi
 # ---------- 3 构建 ----------
 say "3/7 构建面板"
 cd "$APP_DIR/tools/panel"
-sudo -u "$SERVICE_USER" npm ci --no-audit --no-fund || sudo -u "$SERVICE_USER" npm install --no-audit --no-fund
-sudo -u "$SERVICE_USER" npm run build
+# sudo 会重置 PATH，必须用绝对路径调 npm
+sudo -u "$SERVICE_USER" "$NPM_BIN" ci --no-audit --no-fund || sudo -u "$SERVICE_USER" "$NPM_BIN" install --no-audit --no-fund
+sudo -u "$SERVICE_USER" "$NPM_BIN" run build
 [ -f "$APP_DIR/tools/panel/dist/index.html" ] || die "面板构建失败"
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_DIR"
 # nginx 用户要能读到静态文件
