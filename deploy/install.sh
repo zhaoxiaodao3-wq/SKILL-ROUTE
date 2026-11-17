@@ -150,7 +150,14 @@ chmod 644 "$HTPASSWD_FILE"
 # ---------- 6 nginx ----------
 say "6/7 nginx 站点"
 mkdir -p "$NGINX_CONF_DIR"
-cat >"$NGINX_CONF_DIR/harness.conf" <<EOF
+TARGET_CONF="$NGINX_CONF_DIR/${DOMAIN}.conf"
+if [ -f "$TARGET_CONF" ]; then
+  BAK="${TARGET_CONF}.bak.$(date +%s)"
+  cp "$TARGET_CONF" "$BAK"
+  echo "已备份原站点配置：$BAK"
+fi
+
+cat >"$TARGET_CONF" <<EOF
 server {
     listen 80;
     server_name ${DOMAIN};
