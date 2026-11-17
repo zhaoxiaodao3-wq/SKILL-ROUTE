@@ -82,8 +82,13 @@ id -u "$SERVICE_USER" >/dev/null 2>&1 || useradd --system --create-home --home-d
 if [ -d "$APP_DIR/.git" ]; then
   sudo -u "$SERVICE_USER" git -C "$APP_DIR" pull --ff-only
 else
-  mkdir -p "$(dirname "$APP_DIR")"
-  git clone "$REPO_URL" "$APP_DIR"
+  # 目录可能已被 useradd --create-home 建出来，或之前半途失败留下的：先克隆到临时目录再合并
+  TMP_CLONE="$(mktemp -d)"
+  git clone "$REPO_URL" "$TMP_CLONE/repo"
+  mkdir -p "$APP_DIR"
+  cp -R "$TMP_CLONE/repo/." "$APP_DIR/"
+  rm -rf "$TMP_CLONE"
+  echo "已初始化代码到 $APP_DIR"
 fi
 
 # ---------- 2 git 身份 ----------
