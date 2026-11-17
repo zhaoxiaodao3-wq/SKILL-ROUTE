@@ -10,6 +10,9 @@ export default defineConfig({
   server: {
     port: 5180,
     fs: { allow: [resolve(__dirname), resolve(__dirname, '../..')] },
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:7001', changeOrigin: true },
+    },
   },
   build: { outDir: 'dist', emptyOutDir: true },
 })

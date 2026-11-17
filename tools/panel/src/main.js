@@ -15,8 +15,25 @@ function showErr(e) {
 window.addEventListener('error', (e) => showErr(e.error || e.message))
 window.addEventListener('unhandledrejection', (e) => showErr(e.reason))
 
-const CONFLICTS = conflictMap(GRAPH)
-const CHILD_COUNT = childCountMap(GRAPH)
+let CONFLICTS = conflictMap(GRAPH)
+let CHILD_COUNT = childCountMap(GRAPH)
+let SERVER_GRAPH = GRAPH
+let sha = null
+
+function setSha(text) {
+  const el = document.getElementById('sha')
+  if (el) el.textContent = text
+}
+
+let toastTimer = null
+function toast(msg) {
+  const el = document.getElementById('toast')
+  if (!el) return
+  el.textContent = msg
+  el.classList.add('on')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => el.classList.remove('on'), 2200)
+}
 
 // ---------------- 自定义节点 ----------------
 function customNodeContent(node) {
@@ -58,7 +75,7 @@ const stage = document.getElementById('stage')
 function create(extra = {}) {
   return new MindMap({
     el: stage,
-    data: buildTree(GRAPH),
+    data: buildTree(SERVER_GRAPH),
     layout: 'logicalStructure',
     theme: 'default',
     isUseCustomNodeContent: true,
@@ -86,6 +103,56 @@ for (const p of [Drag, Search]) {
 // 自检标记：便于无头浏览器确认插件真的挂上了
 document.body.dataset.search = mindMap.search ? 'ok' : 'missing'
 document.body.dataset.drag = mindMap.drag ? 'ok' : 'missing'
+
+// ---------------- 与网关同步 ----------------
+async function syncFromServer() {
+  try {
+    const r = await fetch('/api/graph')
+    if (!r.ok) throw new Error('no gateway')
+    const d = await r.json()
+    sha = d.sha
+    SERVER_GRAPH = d.graph
+    CONFLICTS = conflictMap(d.graph)
+    CHILD_COUNT = childCountMap(d.graph)
+    mindMap.setData(buildTree(d.graph))
+    try { mindMap.view.fit() } catch { /* 忽略 */ }
+    setSha('已连接 ' + sha.slice(0, 7))
+    document.body.dataset.gateway = 'ok'
+  } catch {
+    setSha('离线（内置数据）')
+    document.body.dataset.gateway = 'offline'
+  }
+}
+
+async function save() {
+  if (!sha) return toast('没有连上网关，无法保存')
+  const btn = document.getElementById('btn-save')
+  btn.disabled = true
+  try {
+    const graph = treeToGraph(mindMap.getData())
+    const r = await fetch('/api/graph', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ graph, sha }),
+    })
+    const d = await r.json().catch(() => ({}))
+    if (r.status === 409) {
+      toast('仓库已被更新，请刷新页面后重试')
+      return
+    }
+    if (!r.ok) {
+      showErr((d.errors || ['保存失败']).join('\n'))
+      return
+    }
+    sha = d.sha
+    setSha('已保存 ' + sha.slice(0, 7))
+    toast(d.unchanged ? '没有变化' : `已提交 ${sha.slice(0, 7)}`)
+  } catch (e) {
+    showErr(e)
+  } finally {
+    btn.disabled = false
+  }
+}
 
 setTimeout(() => {
   try { mindMap.view.fit() } catch (e) { showErr(e) }
@@ -214,6 +281,8 @@ if (initialQ) {
   }, 300)
 }
 
+document.getElementById('btn-save').onclick = () => { save() }
+
 document.getElementById('btn-export').onclick = () => {
   const graph = treeToGraph(mindMap.getData())
   const blob = new Blob([JSON.stringify(graph, null, 2)], { type: 'application/json' })
@@ -247,7 +316,7 @@ testInput.oninput = () => {
   resultsBox.replaceChildren()
   if (!q.trim()) return
 
-  const rows = GRAPH.skills
+  const rows = SERVER_GRAPH.skills
     .map((s) => ({ s, ...score(s, q) }))
     .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score)
@@ -268,3 +337,20 @@ testInput.oninput = () => {
     resultsBox.append(b)
   }
 }
+
+// ---------------- 快捷键：Ctrl+S 保存 ----------------
+window.addEventListener('keydown', (e) => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')
+  const mod = e.ctrlKey || e.metaKey
+  if (mod && e.key.toLowerCase() === 's') {
+    e.preventDefault()
+    save()
+  } else if (mod && e.key.toLowerCase() === 'k' && !typing) {
+    e.preventDefault()
+    searchInput.focus()
+    searchInput.select()
+  }
+})
+
+// ---------------- 启动：尝试连网关 ----------------
+syncFromServer()

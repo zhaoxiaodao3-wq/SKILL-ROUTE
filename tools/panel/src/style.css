@@ -120,3 +120,13 @@ main { flex: 1; position: relative; display: flex; min-height: 0; }
   font: 12px/1.5 ui-monospace, monospace;
 }
 #err.hidden { display: none; }
+
+.sha { color: var(--muted); font-size: 12px; margin-right: 4px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%) translateY(8px);
+  background: #1f2533; color: #fff; padding: 8px 14px; border-radius: 8px;
+  font-size: 12px; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
+  z-index: 98;
+}
+.toast.on { opacity: .94; transform: translateX(-50%) translateY(0); }

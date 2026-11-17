@@ -10,9 +10,11 @@
     <div class="brand">Harness <span>Skill 路由</span></div>
     <input id="search" placeholder="搜索 skill / 触发词">
     <div class="spacer"></div>
+    <span id="sha" class="sha">未连接</span>
+    <button id="btn-save">保存</button>
     <button id="btn-fit">适应画布</button>
     <button id="btn-export">导出 graph.json</button>
-    <span class="hint">Tab 加子级 · Enter 加同级 · F2 改名 · 拖拽改归属</span>
+    <span class="hint">Ctrl+S 保存 · Tab 加子级 · Enter 加同级 · F2 改名 · 拖拽改归属</span>
   </header>
 
   <main>
@@ -27,6 +29,7 @@
   </footer>
 
   <div id="err" class="hidden"></div>
+  <div id="toast" class="toast"></div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
