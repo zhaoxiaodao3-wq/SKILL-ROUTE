@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Harness · Skill 路由</title>
+</head>
+<body>
+  <header id="top">
+    <div class="brand">Harness <span>Skill 路由</span></div>
+    <input id="search" placeholder="搜索 skill / 触发词">
+    <div class="spacer"></div>
+    <button id="btn-fit">适应画布</button>
+    <button id="btn-export">导出 graph.json</button>
+    <span class="hint">Tab 加子级 · Enter 加同级 · F2 改名 · 拖拽改归属</span>
+  </header>
+
+  <main>
+    <div id="stage"></div>
+    <aside id="drawer" class="hidden"></aside>
+  </main>
+
+  <footer id="bottom">
+    <span class="label">试一句</span>
+    <input id="test" placeholder="例如：按 Figma 还原这个长页面">
+    <div id="results"></div>
+  </footer>
+
+  <div id="err" class="hidden"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

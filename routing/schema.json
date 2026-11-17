@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "harness routing graph",
+  "type": "object",
+  "required": ["version", "categories", "skills"],
+  "properties": {
+    "version": { "type": "integer" },
+    "updatedAt": { "type": "string" },
+    "globalConfig": {
+      "type": "object",
+      "properties": {
+        "minConfidence": { "type": "number" },
+        "maxSkillsPerPlan": { "type": "integer" },
+        "autoActivateRiskLevel": { "enum": ["low", "medium", "high"] }
+      }
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "parentId": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "categoryId", "path", "triggers"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "categoryId": { "type": "string" },
+          "path": { "type": "string", "pattern": "^\\.\\./skills/" },
+          "description": { "type": "string" },
+          "triggers": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "antiTriggers": { "type": "array", "items": { "type": "string" } },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "requires": { "type": "array", "items": { "type": "string" } },
+          "after": { "type": "array", "items": { "type": "string" } },
+          "riskLevel": { "enum": ["low", "medium", "high"] },
+          "status": { "enum": ["active", "draft", "deprecated"] }
+        }
+      }
+    }
+  }
+}

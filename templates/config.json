@@ -1,0 +1,17 @@
+{
+  "pack": "harness",
+  "docsRoot": "{{DIR}}/docs/superpowers",
+  "types": ["feature", "ui-style", "api-adapter", "fix"],
+  "moduleDirs": ["requirements", "specs", "plans", "archive"],
+  "specFile": "specs/01-dev-spec.md",
+  "planFile": "plans/01-dev-plan.md",
+  "archiveDir": "archive",
+  "deliveredSuffix": "-delivered.md",
+  "codeRoots": ["src/"],
+  "legacyPaths": [
+    "docs/superpowers/specs/",
+    "docs/superpowers/plans/",
+    "docs/superpowers/archive/",
+    "docs/superpowers/reports/"
+  ]
+}
