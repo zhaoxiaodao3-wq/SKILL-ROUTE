@@ -112,9 +112,10 @@ fi
 # ---------- 3 构建 ----------
 say "3/7 构建面板"
 cd "$APP_DIR/tools/panel"
-# sudo 会重置 PATH，必须用绝对路径调 npm
-sudo -u "$SERVICE_USER" "$NPM_BIN" ci --no-audit --no-fund || sudo -u "$SERVICE_USER" "$NPM_BIN" install --no-audit --no-fund
-sudo -u "$SERVICE_USER" "$NPM_BIN" run build
+# sudo 会重置 PATH，npm 的 shebang 依赖 node，必须显式给 PATH
+run_npm() { sudo -u "$SERVICE_USER" env PATH="/usr/local/bin:/usr/bin:/bin" "$NPM_BIN" "$@"; }
+run_npm ci --no-audit --no-fund || run_npm install --no-audit --no-fund
+run_npm run build
 [ -f "$APP_DIR/tools/panel/dist/index.html" ] || die "面板构建失败"
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_DIR"
 # nginx 用户要能读到静态文件
