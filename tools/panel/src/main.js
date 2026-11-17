@@ -105,9 +105,19 @@ document.body.dataset.search = mindMap.search ? 'ok' : 'missing'
 document.body.dataset.drag = mindMap.drag ? 'ok' : 'missing'
 
 // ---------------- 与网关同步 ----------------
-async function syncFromServer() {
+async function syncFromServer(retry = true) {
   try {
-    const r = await fetch('/api/graph')
+    const r = await fetch('/api/graph', { credentials: 'same-origin' })
+    if (r.status === 401) {
+      setSha('需要登录（刷新一次）')
+      document.body.dataset.gateway = 'unauthorized'
+      if (retry) {
+        // 浏览器在第一次输入密码后才会缓存凭据，稍等重试一次
+        await new Promise((res) => setTimeout(res, 1200))
+        return syncFromServer(false)
+      }
+      return
+    }
     if (!r.ok) throw new Error('no gateway')
     const d = await r.json()
     sha = d.sha
